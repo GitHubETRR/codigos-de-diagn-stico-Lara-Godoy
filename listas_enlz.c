@@ -24,4 +24,4 @@ int main(){
 
 //void *malloc (size_t size); 
 //recibe en bits lo que se pide, 
-//devuelve un puntero a viod para que se pueda adaptar a cualquier tipo que le pidamos (char, int, etc)/*
+//devuelve un puntero a void para que se pueda adaptar a cualquier tipo que le pidamos (char, int, etc)/*
