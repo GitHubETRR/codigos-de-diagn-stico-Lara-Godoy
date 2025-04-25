@@ -23,16 +23,20 @@ typedef struct nota{
     struct nota *siguiente;    //esta tarea contiene la dirección hacia la prox tarea
 } Tarea;
 
-void agregar_tarea(Tarea **lista, int *contador);
-void mostrar_tareas(Tarea *lista);
-void imprimir_tarea(Tarea *tarea);
-void marcar_tarea(Tarea *lista);
-void eliminar_tarea(Tarea **lista, int id);
+void agregar_tarea(Tarea **lista, int *contador); //arreglar el orden de ID
+void mostrar_tareas(Tarea *lista); //tambien tiene que leer las del archivo
+void imprimir_tarea(Tarea *tarea); 
+void marcar_tarea(Tarea **lista);
+void eliminar_tarea(Tarea **lista, int id); //agregar para borrar en el file
+void mostrar_tareas_f(); //tareas que quedaron en el file
+void guardar_tareas_f(); 
+
 
 int main(){
     int eleccion;    
     int contador_id = 1;
     Tarea *lista = NULL; 
+    mostrar_tareas_f();
     do{
         printf("\n--- TO-DO LIST ---\n");
         printf("1. Agregar una nueva tarea.\n");
@@ -50,12 +54,11 @@ int main(){
             mostrar_tareas(lista);
             break;
         case MARCAR:
-            printf("elegiste MARCAR");
-            marcar_tarea(lista);
+            marcar_tarea(&lista);
             break; 
         case SALIR:
             printf("elegiste SALIR");
-            //LIBERAR LA MEMORIA
+            //guardar_tareas()
             break;
         }  
     } while (eleccion != SALIR);
@@ -127,7 +130,7 @@ void imprimir_tarea(Tarea *tarea){
     printf("--------------------\n");
 }
 
-void marcar_tarea(Tarea *lista){
+void marcar_tarea(Tarea **lista){
     int id_tarea_completa = 0;
     int respuesta = 0;
     if (lista == NULL) {
@@ -137,7 +140,7 @@ void marcar_tarea(Tarea *lista){
     printf("Ingrese el ID de la tarea que desea marcar como completada: ");
     scanf("%d", &id_tarea_completa);
 
-    Tarea *actual = lista;
+    Tarea *actual = *lista;
     //se crea una copia del puntero para recorrer sin perder los datos 
     while (actual != NULL){
         if (actual->id == id_tarea_completa) {
@@ -150,7 +153,7 @@ void marcar_tarea(Tarea *lista){
                 printf("Queres eliminar esta tarea de la lista? 1 = Si, 0 = No");
                 scanf("%d", &respuesta);
                 if (respuesta == 1){
-                    eliminar_tarea(lista, id_tarea_completa)
+                    eliminar_tarea(lista, id_tarea_completa);
                 }
             }
             return;
@@ -160,10 +163,47 @@ void marcar_tarea(Tarea *lista){
     printf("No se encontró ninguna tarea con ID %d.\n", id_tarea_completa);
 }
 
-eliminar_tarea(Tarea **lista, int id){
+void eliminar_tarea(Tarea **lista, int id_marcar){
     if (*lista == NULL) { //si la COPIA del puntero es NULL
         printf("No hay tareas para eliminar.\n");
         return;
     }
-    //terminar funcion
+
+    Tarea *actual = *lista;
+    Tarea *anterior = NULL;
+
+    while (actual != NULL) {
+        if (actual->id == id_marcar) {
+            if (anterior == NULL) {
+                *lista = actual->siguiente;
+            } else {
+                anterior->siguiente = actual->siguiente; //no es el primer nodo
+            }
+            free(actual->descrip);
+            free(actual);
+            printf("Tarea ID %d eliminada con exito.\n", id_marcar);
+            return;
+        }
+        anterior = actual;          //apunta al anterior
+        actual = actual->siguiente; //apunta al siguente del anterior
+    }
+    printf("No se encontro ninguna tarea con ID %d para eliminar.\n", id_marcar);
+}
+
+void mostrar_tareas_f(){
+    FILE *archivo = fopen("pilar_tareas.txt", "r");
+    char linea[TXT_MAX];
+
+    if (archivo == NULL) {
+        printf("No se pudo abrir el archivo.\n");
+        return;
+    }
+
+    printf("Tareas cargadas anteriormente: \n");
+    while (fgets(linea, TXT_MAX, archivo)) {
+        printf("%s", linea);
+    }
+
+    printf("\n");
+    fclose(archivo);
 }
