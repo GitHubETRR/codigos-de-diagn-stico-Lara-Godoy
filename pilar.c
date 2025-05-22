@@ -4,6 +4,10 @@
 
 #define TXT_MAX 50
 
+#define ID_CARAC 3
+#define DESCRIP_CARAC 13
+#define ESTADO_CARAC 7
+
 typedef enum{
     PENDIENTE,
     COMPLETADA
@@ -23,19 +27,24 @@ typedef struct nota{
     struct nota *siguiente;    //esta tarea contiene la dirección hacia la prox tarea
 } Tarea;
 
-void agregar_tarea(Tarea **lista, int *contador); //arreglar el orden de ID
-void mostrar_tareas(Tarea *lista); //tambien tiene que leer las del archivo
+//arreglar descripcion de tareas del file
+
+void agregar_tarea(Tarea **lista, int *contador); 
+void mostrar_tareas(Tarea *lista);
 void imprimir_tarea(Tarea *tarea); 
 void marcar_tarea(Tarea **lista);
 void eliminar_tarea(Tarea **lista, int id); //agregar para borrar en el file
 void mostrar_tareas_f(); //tareas que quedaron en el file
 void guardar_tareas_f(); 
+int id_archivo();
+void cargar_tareas_f(Tarea **lista);
 
 
 int main(){
     int eleccion;    
-    int contador_id = 1;
+    int contador_id = id_archivo() + 1;
     Tarea *lista = NULL; 
+    cargar_tareas_f(&lista);
     mostrar_tareas_f();
     do{
         printf("\n--- TO-DO LIST ---\n");
@@ -82,7 +91,7 @@ void agregar_tarea(Tarea **lista, int *contador){
         nueva->descrip = (char *)malloc(TXT_MAX * sizeof(char));
         if (nueva->descrip == NULL) {
             printf("Sin memoria.");
-            free(nueva); //aca si se necesita el free porque malloc para 'nueva' sí funcionó
+            free(nueva); //aca si se necesita el free porque malloc para 'nueva' si funciono
             exit(-1);
         }
         printf("Ingrese la descripcion de la tarea: ");
@@ -114,7 +123,7 @@ void mostrar_tareas(Tarea *lista){
         printf("No hay tareas para mostrar.\n");
         return;
     }
-    
+
     while (lista != NULL) {
         imprimir_tarea(lista);
         lista = lista->siguiente;
@@ -160,7 +169,7 @@ void marcar_tarea(Tarea **lista){
         }
         actual = actual->siguiente;
     }
-    printf("No se encontró ninguna tarea con ID %d.\n", id_tarea_completa);
+    printf("No se encontro ninguna tarea con ID %d.\n", id_tarea_completa);
 }
 
 void eliminar_tarea(Tarea **lista, int id_marcar){
@@ -205,5 +214,77 @@ void mostrar_tareas_f(){
     }
 
     printf("\n");
+    fclose(archivo);
+}
+
+int id_archivo(){
+    FILE *archivo = fopen("pilar_tareas.txt", "r");
+
+    if (archivo == NULL) {
+        printf("No se pudo abrir el archivo.\n");
+        return 0;
+    }
+
+    int max_id = 0;
+    char linea[TXT_MAX];
+
+    while (fgets(linea, TXT_MAX, archivo)) {
+        if (strncmp(linea, "ID:", ID_CARAC) == 0) { 
+            //compara los primeros 3 caracteres de la linea con "ID:"
+            int id;
+            sscanf(linea, "ID: %d", &id); //guarda el ID encontrado en id
+            if (id > max_id) {
+                max_id = id;
+            }
+        }
+    }
+    fclose(archivo);
+    return max_id;
+}
+
+void cargar_tareas_f(Tarea **lista){
+    FILE *archivo = fopen("pilar_tareas.txt", "r");
+
+    if (archivo == NULL) {
+        printf("No se pudo abrir el archivo.\n");
+        return;
+    }
+    char linea[TXT_MAX];
+    int id = 0;
+    char estado_str[TXT_MAX];
+    char descripcion[TXT_MAX];
+
+    while (fgets(linea, TXT_MAX, archivo)) {
+        if (strncmp(linea, "ID:", ID_CARAC) == 0) {
+            sscanf(linea, "ID: %d", &id);
+        } else if (strncmp(linea, "Descripcion:", DESCRIP_CARAC) == 0) {
+            sscanf(linea, "Estado: %[^\n]", descripcion);  //%[^\n] par aque lea hasta un salto de linea pero no funciona
+        } else if (strncmp(linea, "Estado:", ESTADO_CARAC) == 0) {
+            sscanf(linea, "Estado: %s", estado_str);
+        
+            Tarea *nueva = (Tarea *)malloc(sizeof(Tarea));
+            if (nueva == NULL) {
+                printf("Sin memoria.\n");
+                fclose(archivo);
+                return;
+            }
+
+            nueva->id = id;
+            nueva->descrip = strdup(descripcion);  //duplica el string en nueva memoria
+            nueva->estado = strcmp(estado_str, "Pendiente") == 0 ? PENDIENTE : COMPLETADA;
+            //strcmp compara dos cadenas y con el op ternario si da Pendiente es PENDIENTE y si no es COMPLETADA
+            nueva->siguiente = NULL;
+
+            if (*lista == NULL) {
+                *lista = nueva;
+            } else {
+                Tarea *actual = *lista;
+                while (actual->siguiente != NULL) {
+                    actual = actual->siguiente;
+                }
+                actual->siguiente = nueva;
+            }
+        }
+    }
     fclose(archivo);
 }
