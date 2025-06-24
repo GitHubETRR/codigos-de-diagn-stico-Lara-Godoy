@@ -1,4 +1,9 @@
+import pandas as pd
+import os
+
 comics = []
+
+ruta_archivo = "C:/Users/ticia/Documents/curso python/proyecto excel/comics_intro.xlsx"
 
 cant_com = int(input("Cantidad de comics a ingresar: "))
 
@@ -20,9 +25,19 @@ for i in range(cant_com):
     nombre = input("\nNombre del comic: ").capitalize()
     id = i + 1
     universo = str(input("Universo: ")).upper()
-    comics.append([id, nombre, universo])
+    comics.append({
+        "ID" : id,
+        "Nombre" : nombre,
+        "Universo" : universo,
+    })
 
 print("\nLista completa:\n")
 
-for comics in comics:
-    print(f"ID {comics[0]}: {comics[1]}. Universo {comics[2]}")
+for comic in comics:
+    print(f"ID {comic['ID']}: {comic['Nombre']}. Universo {comic['Universo']}")
+
+
+df = pd.DataFrame(comics)
+
+df.to_excel(ruta_archivo, index=False)
+print("Archivo 'comics_intro.xlsx' guardado correctamente.")
