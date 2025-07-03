@@ -1,11 +1,8 @@
---------------------
 ID: 1
 Descripcion: estudiar mate
 Estado: Pendiente
---------------------
 
---------------------
 ID: 2
-Descripcion: estudiar tombe
+Descripcion: estudiar python
 Estado: Pendiente
---------------------
+

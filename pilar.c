@@ -3,7 +3,6 @@
 #include <string.h>
 
 #define TXT_MAX 50
-
 #define ID_CARAC 3
 #define DESCRIP_CARAC 13
 #define ESTADO_CARAC 7
@@ -37,7 +36,9 @@ void eliminar_tarea(Tarea **lista, int id); //agregar para borrar en el file
 void mostrar_tareas_f(); //tareas que quedaron en el file
 void guardar_tareas_f(); 
 int id_archivo();
-void cargar_tareas_f(Tarea **lista);
+void cargar_tareas_f(Tarea **lista); //las carga antes de que se ponga el menu
+void guardar_tareas_f(Tarea *lista); //las guarda en el file
+void liberar_lista(Tarea *lista);
 
 
 int main(){
@@ -45,13 +46,13 @@ int main(){
     int contador_id = id_archivo() + 1;
     Tarea *lista = NULL; 
     cargar_tareas_f(&lista);
-    mostrar_tareas_f();
+    mostrar_tareas(lista);
     do{
         printf("\n--- TO-DO LIST ---\n");
         printf("1. Agregar una nueva tarea.\n");
         printf("2. Mostrar todas las tareas.\n");
         printf("3. Marcar tarea como completada.\n");
-        printf("4. Salir.\n");
+        printf("4. Salir.\n\n");
         printf("Selecciona una opcion: ");
         scanf("%d", &eleccion);
 
@@ -66,8 +67,9 @@ int main(){
             marcar_tarea(&lista);
             break; 
         case SALIR:
-            printf("elegiste SALIR");
-            //guardar_tareas()
+            guardar_tareas_f(lista);
+            liberar_lista(lista);
+            printf("Chau.");
             break;
         }  
     } while (eleccion != SALIR);
@@ -131,12 +133,10 @@ void mostrar_tareas(Tarea *lista){
 }
 
 void imprimir_tarea(Tarea *tarea){
-    printf("\n--------------------\n");
     printf("ID: %d\n", tarea->id);
     printf("Descripcion: %s\n", tarea->descrip);
     printf("Estado: %s\n", tarea->estado == PENDIENTE ? "Pendiente" : "Completada");
     //op ternario: (condición) ? (valor_si_verdadero) : (valor_si_falso)
-    printf("--------------------\n");
 }
 
 void marcar_tarea(Tarea **lista){
@@ -158,13 +158,12 @@ void marcar_tarea(Tarea **lista){
             } else {
                 actual->estado = COMPLETADA;
                 printf("Tarea ID %d, %s marcada como completada con exito.\n", id_tarea_completa, actual->descrip);
-                
-                printf("Queres eliminar esta tarea de la lista? 1 = Si, 0 = No");
+            }
+            printf("Queres eliminar esta tarea de la lista? 1 = Si, 0 = No: ");
                 scanf("%d", &respuesta);
                 if (respuesta == 1){
                     eliminar_tarea(lista, id_tarea_completa);
                 }
-            }
             return;
         }
         actual = actual->siguiente;
@@ -253,15 +252,29 @@ void cargar_tareas_f(Tarea **lista){
     int id = 0;
     char estado_str[TXT_MAX];
     char descripcion[TXT_MAX];
+    descripcion[0] = '\0';  // limpio el buffer al inicio
 
     while (fgets(linea, TXT_MAX, archivo)) {
         if (strncmp(linea, "ID:", ID_CARAC) == 0) {
             sscanf(linea, "ID: %d", &id);
-        } else if (strncmp(linea, "Descripcion:", DESCRIP_CARAC) == 0) {
-            sscanf(linea, "Estado: %[^\n]", descripcion);  //%[^\n] par aque lea hasta un salto de linea pero no funciona
+        } else if (strncmp(linea, "Descripcion:", 11) == 0) {
+            char *ptr = strchr(linea, ':');
+            //busca al : y devuelve un puntero a esa posicion, sino da NULL
+            if (ptr != NULL && *(ptr + 1) != '\0') { //que : exista y que despues de : haya algo
+                ptr++; //avanza después del :
+                while (*ptr == ' ') ptr++; //salta espacios
+                strncpy(descripcion, ptr, TXT_MAX - 1);
+                //copia desde ptr hasta TXT_MAX - 1
+                descripcion[TXT_MAX - 1] = '\0'; //deja la string terminada en \0
+                descripcion[strcspn(descripcion, "\n")] = '\0';
+                //strcspn busca la 1ra posicion donde aparece un salto de linea y devuelve donde esta
+                //se iguala a \0 para evitar que queden saltos de linea ocultos al final de la descripcion
+            } else {
+                descripcion[0] = '\0'; //sino hay : o no hay nada despues, la descripcion queda vacia
+            }
         } else if (strncmp(linea, "Estado:", ESTADO_CARAC) == 0) {
             sscanf(linea, "Estado: %s", estado_str);
-        
+
             Tarea *nueva = (Tarea *)malloc(sizeof(Tarea));
             if (nueva == NULL) {
                 printf("Sin memoria.\n");
@@ -270,9 +283,8 @@ void cargar_tareas_f(Tarea **lista){
             }
 
             nueva->id = id;
-            nueva->descrip = strdup(descripcion);  //duplica el string en nueva memoria
+            nueva->descrip = strdup(descripcion);
             nueva->estado = strcmp(estado_str, "Pendiente") == 0 ? PENDIENTE : COMPLETADA;
-            //strcmp compara dos cadenas y con el op ternario si da Pendiente es PENDIENTE y si no es COMPLETADA
             nueva->siguiente = NULL;
 
             if (*lista == NULL) {
@@ -287,4 +299,30 @@ void cargar_tareas_f(Tarea **lista){
         }
     }
     fclose(archivo);
+}
+
+void guardar_tareas_f(Tarea *lista){
+    FILE *archivo = fopen("pilar_tareas.txt", "w");
+    if (archivo == NULL) {
+        printf("No se pudo abrir el archivo para guardar.\n");
+        return;
+    }
+
+    while (lista != NULL) {
+        fprintf(archivo, "ID: %d\n", lista->id);
+        fprintf(archivo, "Descripcion: %s\n", lista->descrip);
+        fprintf(archivo, "Estado: %s\n\n", lista->estado == PENDIENTE ? "Pendiente" : "Completada");
+        lista = lista->siguiente;
+    }
+    fclose(archivo);
+}
+
+void liberar_lista(Tarea *lista){
+    Tarea *actual = lista;
+    while (actual != NULL){
+        Tarea *siguiente = actual->siguiente;
+        free(actual->descrip);
+        free(actual);
+        actual = siguiente;
+    }
 }
