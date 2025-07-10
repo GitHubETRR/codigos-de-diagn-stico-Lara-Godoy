@@ -1,0 +1,20 @@
+Numero de ID: 1
+Nombre del comic: Flash
+Precio: 10
+Stock: 0
+
+Numero de ID: 2
+Nombre del comic: IronMan
+Precio: 15
+Stock: 10
+
+Numero de ID: 3
+Nombre del comic: SpiderMan
+Precio: 20
+Stock: 19
+
+Numero de ID: 4
+Nombre del comic: Capitan America
+Precio: 22
+Stock: 20
+
