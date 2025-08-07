@@ -2,19 +2,11 @@
 #include <string>
 #include <vector>
 #include <map>
-#include <algorithm>
+#include <algorithm> 
 
 using namespace std;
 
 #define TXT_MAX 50
-
-/*
-2. pullir agregar
-- que compre cuantos pueda si lo que pide el comprador > stock
-
-3. terminar menu del propietario
-4. terminar operaciones del propietario
-*/
 
 enum perfiles{
     COMPRADOR,
@@ -22,8 +14,7 @@ enum perfiles{
 };
 
 enum op_prop{
-    ACTUALIZAR_STOCK,               //actualizar stock usando un archivo
-    ACTUALIZAR_COMIC,               //actualizar stock por comic
+    ACTUALIZAR_STOCK=1,               //actualizar stock usando un archivo
     VER_INVENTARIO,                 //ver inventario
     SALIR_PROG
 };
@@ -56,8 +47,9 @@ private:
 public:
     void inicio_comprador();              //pide datos al usuario (el nuevo cliente)
     void menu_comprador();
-    //void salida_usuario();
+
     void menu_prop();
+    void prop_cargar_stock();
 
     void mostrar_inventario_f();        //muestra la lista de comics con todos sus datos
     void mostrar_carrito();
@@ -84,9 +76,7 @@ int main() {
         tienda.inicio_comprador();
         tienda.menu_comprador();
     }else{
-        //tienda.inicio_prop();
-        cout << "Sos propi";
-        //tienda.menu_prop();
+        tienda.menu_prop();
     }
     return 0;
 }
@@ -253,32 +243,60 @@ void Tienda::mostrar_carrito(){
 
 void Tienda::eliminar_comic_carrito(){
     bool encontrado = false;
-    int cant_deseada;
-    int cant_eliminada;
-    int cant_sobrante;
+    int cant_a_eliminar;
     int id_buscado;
 
     cout << "Ingrese el ID del comic que desea eliminar del carrito: ";
     cin >> id_buscado;
 
-    for (Comic &c : inventario){
-        if (c.id == id_buscado){
+    //for (Comic &c : inventario){ no deja eliminar elementos
+    for (auto it = carrito.begin(); it != carrito.end(); ++it){
+        if (it->id == id_buscado){
             encontrado = true;
 
             cout << "Cuantos comics queres eliminar?: ";
-            cin >> cant_eliminada;
+            cin >> cant_a_eliminar;
 
-            cant_sobrante = c.cant_deseada - cant_eiminada;
+            if (cant_a_eliminar <= 0) {
+                cout << "Cantidad invalida.\n";
+                return;
+            }
 
-            cout << "\nComic elimindado del carrito.";
-            cout << "\nCantidad de comics con el ID = " << id_buscado << "son: " << cant_sobrante;
-            cout << "\nPresupuesto restante: " << presupuesto << endl;
+            if (cant_a_eliminar >= it->cant_stock){ //elimina la compra
+                presupuesto += it->precio * it->cant_stock;
+
+                for (Comic &c : inventario){ //devuelve la cantidad de stock
+                    if (c.id == id_buscado){
+                        c.cant_stock += it->cant_stock;
+                        break;
+                    }
+                }
+            
+                cout << "\nSe eliminaron " << it->cant_stock << " unidades del comic ID = " << id_buscado << " del carrito.\n";
+                cout << "Presupuesto devuelto: " << it->precio * it->cant_stock << endl;
+
+                carrito.erase(it);
+            }else{ //elimina un par de comics (cant_a_eliminar < cantidad comprada)
+                it->cant_stock -= cant_a_eliminar;
+                presupuesto += it->precio * cant_a_eliminar;
+
+                for (Comic &c : inventario) {
+                    if (c.id == id_buscado) {
+                        c.cant_stock += cant_a_eliminar;
+                        break;
+                    }
+                }
+
+                cout << "\nSe eliminaron " << cant_a_eliminar << " unidades del comic ID = " << id_buscado << " del carrito.\n";
+                cout << "Presupuesto: " << it->precio * cant_a_eliminar << endl;
+            }
+
             return;
-        }
-    }
 
-    if (!encontrado){
-        cout << "ID no encontrado en el carrito.\n";
+        if (!encontrado){
+            cout << "ID no encontrado en el carrito.\n";
+        }
+        }
     }
 }
 
@@ -311,18 +329,38 @@ void Tienda::menu_comprador(){
             cout << "Elegiste eliminar.";
             break; 
         case SALIR:
-            //actualizar_stock_f();
             mostrar_inventario_f();
-            //actualizar_clientes_f();
-            //liberar();
-            //salida_usuario();
-            cout << "Chau.";
+            cout << "Gracias por comprarnos :)";
             break;
         default:
             cout << "Algo malio sal.\n";
             break;
         }
     } while (eleccion != SALIR);
+}
+
+void Tienda::prop_cargar_stock(){
+    FILE *archivo_origen = fopen("stock_og.txt", "r");
+    FILE *archivo = fopen("stock_comics.txt", "w");
+    char linea[TXT_MAX];
+
+    if (archivo_origen == NULL) {
+        cout << "No se pudo abrir el archivo.\n";
+        return;
+    }
+
+    if (archivo == NULL) {
+        cout << "No se pudo abrir el archivo.\n";
+        return;
+    }
+
+    while (fgets(linea, TXT_MAX, archivo_origen)){
+        fputs(linea, archivo);
+    }
+    
+    fclose(archivo_origen);
+    fclose(archivo);
+    cout << "\nStock actualizado correctamente desde nuevo_stock.txt.\n";
 }
 
 void Tienda::menu_prop(){
@@ -331,41 +369,24 @@ void Tienda::menu_prop(){
     do{
         cout << "\n--- MENU PROPIETARIO ---\n";
         cout << "1. Actualizar inventario completo\n";
-        cout << "2. Actualizar inventario por comic\n";
-        cout << "3. Ver inventario\n";
-        cout << "5. Salir\n";
+        cout << "2. Ver inventario\n";
+        cout << "3. Salir\n";
         cout << "Ingrese una opcion: ";
         cin >> eleccion;
 
         switch (eleccion){ 
         case ACTUALIZAR_STOCK:
-            //
-            break;
-        case ACTUALIZAR_COMIC:
-            //
+            prop_cargar_stock();
             break;
         case VER_INVENTARIO:
-            //
+            mostrar_inventario_f();
             break; 
         case SALIR_PROG:
-            //
-            cout << "Chau.";
+            cout << "Volve a trabajar.";
             break;
         default:
             cout << "Algo malio sal.\n";
             break;
         }
-    } while (eleccion != SALIR);
+    } while (eleccion != SALIR_PROG);
 }
-
-
-
-
-
-
-
-
-
-
-
-
